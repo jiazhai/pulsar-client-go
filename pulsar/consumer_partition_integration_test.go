@@ -21,7 +21,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const image = "apachepulsar/pulsar:2.6.1"
+const containerName = "zen_elion"
+const image = "streamnative/pulsar-all:2.6.1-sn-3"
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
@@ -29,15 +30,15 @@ func init() {
 
 func TestDeadlock(t *testing.T) {
 	// Bootstrapping
-	containerName := randomName("pulsar-test")
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
-	require.NoError(t, startPulsarContainer(ctx, t, containerName), "Could not start Pulsar container")
-	cancel()
+	//containerName := randomName("pulsar-test")
+	//ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	//require.NoError(t, startPulsarContainer(ctx, t, containerName), "Could not start Pulsar container")
+	//cancel()
 
 	t.Log("Bootstrap done, starting test...")
 
 	// New context
-	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	t.Cleanup(cancel)
 
 	// Debug server
@@ -52,7 +53,8 @@ func TestDeadlock(t *testing.T) {
 	}()
 
 	// Creating client
-	port := hostPort(ctx, t, containerName, "6650")
+	port := "6650"
+	//port := hostPort(ctx, t, containerName, "6650")
 	nc, err := newClient(ClientOptions{
 		URL:                     "pulsar://localhost:" + port,
 		MaxConnectionsPerBroker: 1,
@@ -60,25 +62,27 @@ func TestDeadlock(t *testing.T) {
 	require.NoError(t, err)
 
 	// Creating producer
-	topic := randomName("topic-name")
-	p, err := nc.CreateProducer(ProducerOptions{
-		Topic: topic,
-		Name:  randomName("producer-name"),
-	})
-	require.NoError(t, err)
+	//topic := randomName("topic-name")
+	topic := "topic-name-61b9697b6f087aca"
+	//p, err := nc.CreateProducer(ProducerOptions{
+	//	Topic: topic,
+	//	Name:  randomName("producer-name"),
+	//})
+	//require.NoError(t, err)
 
 	// Publishing a lot of messages to target topic
 	tot := 100000
-	t.Logf("Publishing %d messages", tot)
-	for i := 0; i < tot; i++ {
-		key := fmt.Sprintf("msg-%d", i)
-		publish(ctx, t, p, key)
-	}
+	//t.Logf("Publishing %d messages", tot)
+	//for i := 0; i < tot; i++ {
+	//	key := fmt.Sprintf("msg-%d", i)
+	//	publish(ctx, t, p, key)
+	//}
 
 	// Creating consumer
 	c, err := nc.Subscribe(ConsumerOptions{
-		Name:                        randomName("consumer-name"),
-		SubscriptionName:            randomName("subscription-name"),
+		Name:             randomName("consumer-name"),
+		SubscriptionName: randomName("subscription-name"),
+		//SubscriptionName:            "ccc",
 		Topic:                       topic,
 		Type:                        KeyShared,
 		SubscriptionInitialPosition: SubscriptionPositionEarliest,
@@ -95,9 +99,10 @@ func TestDeadlock(t *testing.T) {
 			msg, err := c.Receive(ctx)
 			require.NoError(t, err)
 			t.Logf("Got message %d", i)
+			wg.Done()
 
 			go func(msg Message) {
-				defer wg.Done()
+				//defer wg.Done()
 				acknowledged := make(chan struct{})
 				ticker := time.NewTicker(150 * time.Millisecond)
 
@@ -111,6 +116,7 @@ func TestDeadlock(t *testing.T) {
 					case <-ticker.C:
 						t.Logf("[%s] Trying to ack %+v", time.Now(), msg.ID())
 					case <-acknowledged:
+						t.Logf("All good with: %+v", msg.ID())
 						return
 					}
 				}

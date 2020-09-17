@@ -151,6 +151,7 @@ type partitionConsumer struct {
 	lastDequeuedMsg trackingMessageID
 
 	eventsCh     chan interface{}
+	ackEventsCh  chan *ackRequest
 	connectedCh  chan struct{}
 	closeCh      chan struct{}
 	clearQueueCh chan func(id trackingMessageID)
@@ -175,6 +176,7 @@ func newPartitionConsumer(parent Consumer, client *client, options *partitionCon
 		consumerID:           client.rpcClient.NewConsumerID(),
 		partitionIdx:         int32(options.partitionIdx),
 		eventsCh:             make(chan interface{}, 3),
+		ackEventsCh:          make(chan *ackRequest, 3),
 		queueSize:            int32(options.receiverQueueSize),
 		queueCh:              make(chan []*message, options.receiverQueueSize),
 		startMessageID:       options.startMessageID,
@@ -299,7 +301,8 @@ func (pc *partitionConsumer) AckID(msgID trackingMessageID) {
 		req := &ackRequest{
 			msgID: msgID,
 		}
-		pc.eventsCh <- req
+		//pc.eventsCh <- req
+		pc.ackEventsCh <- req
 
 		pc.options.interceptors.OnAcknowledge(pc.parentConsumer, msgID)
 	}
@@ -735,10 +738,12 @@ func (pc *partitionConsumer) runEventsLoop() {
 		select {
 		case <-pc.closeCh:
 			return
+		case v := <-pc.ackEventsCh:
+			pc.internalAck(v)
 		case i := <-pc.eventsCh:
 			switch v := i.(type) {
-			case *ackRequest:
-				pc.internalAck(v)
+			//case *ackRequest:
+			//	pc.internalAck(v)
 			case *redeliveryRequest:
 				pc.internalRedeliver(v)
 			case *unsubscribeRequest:
