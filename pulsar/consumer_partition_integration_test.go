@@ -63,26 +63,25 @@ func TestDeadlock(t *testing.T) {
 
 	// Creating producer
 	//topic := randomName("topic-name")
-	topic := "topic-name-61b9697b6f087aca"
-	//p, err := nc.CreateProducer(ProducerOptions{
-	//	Topic: topic,
-	//	Name:  randomName("producer-name"),
-	//})
-	//require.NoError(t, err)
+	topic := "my-topic-name"
+	p, err := nc.CreateProducer(ProducerOptions{
+		Topic: topic,
+		Name:  randomName("producer-name"),
+	})
+	require.NoError(t, err)
 
 	// Publishing a lot of messages to target topic
 	tot := 100000
-	//t.Logf("Publishing %d messages", tot)
-	//for i := 0; i < tot; i++ {
-	//	key := fmt.Sprintf("msg-%d", i)
-	//	publish(ctx, t, p, key)
-	//}
+	t.Logf("Publishing %d messages", tot)
+	for i := 0; i < tot; i++ {
+		key := fmt.Sprintf("msg-%d", i)
+		publish(ctx, t, p, key)
+	}
 
 	// Creating consumer
 	c, err := nc.Subscribe(ConsumerOptions{
-		Name:             randomName("consumer-name"),
-		SubscriptionName: randomName("subscription-name"),
-		//SubscriptionName:            "ccc",
+		Name:                        randomName("consumer-name"),
+		SubscriptionName:            randomName("subscription-name"),
 		Topic:                       topic,
 		Type:                        KeyShared,
 		SubscriptionInitialPosition: SubscriptionPositionEarliest,
@@ -100,27 +99,28 @@ func TestDeadlock(t *testing.T) {
 			require.NoError(t, err)
 			t.Logf("Got message %d", i)
 			wg.Done()
+			go c.Ack(msg) // no waiting on this, we don't need to ack them all for this test
 
-			go func(msg Message) {
-				//defer wg.Done()
-				acknowledged := make(chan struct{})
-				ticker := time.NewTicker(150 * time.Millisecond)
-
-				go func() {
-					c.Ack(msg)
-					acknowledged <- struct{}{}
-				}()
-
-				for {
-					select {
-					case <-ticker.C:
-						t.Logf("[%s] Trying to ack %+v", time.Now(), msg.ID())
-					case <-acknowledged:
-						t.Logf("All good with: %+v", msg.ID())
-						return
-					}
-				}
-			}(msg)
+			//go func(msg Message) {
+			//	//defer wg.Done()
+			//	acknowledged := make(chan struct{})
+			//	ticker := time.NewTicker(150 * time.Millisecond)
+			//
+			//	go func() {
+			//		c.Ack(msg)
+			//		acknowledged <- struct{}{}
+			//	}()
+			//
+			//	for {
+			//		select {
+			//		case <-ticker.C:
+			//			t.Logf("[%s] Trying to ack %+v", time.Now(), msg.ID())
+			//		case <-acknowledged:
+			//			t.Logf("All good with: %+v", msg.ID())
+			//			return
+			//		}
+			//	}
+			//}(msg)
 		}
 	}()
 
