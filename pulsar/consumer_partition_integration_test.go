@@ -1,4 +1,3 @@
-// +build integration
 
 package pulsar
 
@@ -34,11 +33,12 @@ func TestDeadlock(t *testing.T) {
 	//ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 	//require.NoError(t, startPulsarContainer(ctx, t, containerName), "Could not start Pulsar container")
 	//cancel()
+	//log.SetLevel(log.DebugLevel)
 
 	t.Log("Bootstrap done, starting test...")
 
 	// New context
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	t.Cleanup(cancel)
 
 	// Debug server
@@ -64,19 +64,21 @@ func TestDeadlock(t *testing.T) {
 	// Creating producer
 	//topic := randomName("topic-name")
 	topic := "my-topic-name"
-	p, err := nc.CreateProducer(ProducerOptions{
-		Topic: topic,
-		Name:  randomName("producer-name"),
-	})
-	require.NoError(t, err)
+
+	//p, err := nc.CreateProducer(ProducerOptions{
+	//	Topic: topic,
+	//	Name:  randomName("producer-name"),
+	//})
+	//require.NoError(t, err)
 
 	// Publishing a lot of messages to target topic
 	tot := 100000
-	t.Logf("Publishing %d messages", tot)
-	for i := 0; i < tot; i++ {
-		key := fmt.Sprintf("msg-%d", i)
-		publish(ctx, t, p, key)
-	}
+
+	//t.Logf("Publishing %d messages", tot)
+	//for i := 0; i < tot; i++ {
+	//	key := fmt.Sprintf("msg-%d", i)
+	//	publish(ctx, t, p, key)
+	//}
 
 	// Creating consumer
 	c, err := nc.Subscribe(ConsumerOptions{
