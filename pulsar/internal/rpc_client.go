@@ -101,11 +101,8 @@ func (c *rpcClient) Request(logicalAddr *url.URL, physicalAddr *url.URL, request
 		*RPCResult
 		error
 	}
-	//ch := make(chan Res)
 	ch := make(chan Res, 10)
 
-	// TODO: in here, the error of callback always nil
-	//    todo: jia. Need handle errors with disconnections
 	cnx.SendRequest(requestID, baseCommand(cmdType, message), func(response *pb.BaseCommand, err error) {
 		ch <- Res{&RPCResult{
 			Cnx:      cnx,

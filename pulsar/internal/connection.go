@@ -342,15 +342,10 @@ func (c *connection) waitUntilReady() error {
 }
 
 func (c *connection) failLeftRequestsWhenClose() {
-	for {
-		select {
-		case req := <-c.incomingRequestsCh:
-			if req == nil {
-				close(c.incomingRequestsCh)
-			}
-			c.internalSendRequest(req)
-		}
+	for req := range c.incomingRequestsCh {
+		c.internalSendRequest(req)
 	}
+	close(c.incomingRequestsCh)
 }
 
 func (c *connection) run() {
@@ -358,7 +353,7 @@ func (c *connection) run() {
 	go c.reader.readFromConnection()
 	go c.runPingCheck()
 
-	c.log.Errorf("Connection run start channel %+v, requestLength %d", c, len(c.incomingRequestsCh))
+	c.log.Debugf("Connection run start channel %+v, requestLength %d", c, len(c.incomingRequestsCh))
 
 	defer func() {
 		// all the accesses to the pendingReqs should be happened in this run loop thread,
@@ -370,18 +365,12 @@ func (c *connection) run() {
 		}
 		c.pendingLock.Unlock()
 		c.Close()
-		c.log.Error("Connection run close")
 	}()
 
 	go func() {
-		c.log.Error("connection backend go start")
-
 		for {
 			select {
 			case <-c.closeCh:
-				// todo: jia. already closed, need to call below
-				//   c.incomingRequestsCh:c.internalSendRequest(req) to fail all current requests ?
-				c.log.Error("----- connection backend go for 1 exit by close, requestLength ", len(c.incomingRequestsCh))
 				c.failLeftRequestsWhenClose()
 				return
 
@@ -397,7 +386,6 @@ func (c *connection) run() {
 	for {
 		select {
 		case <-c.closeCh:
-			c.log.Error("connection backend go for 2 exit by close")
 			return
 
 		case cmd := <-c.incomingCmdCh:
@@ -597,7 +585,7 @@ func (c *connection) internalSendRequest(req *request) {
 	}
 	c.pendingLock.Unlock()
 	if c.state == connectionClosed {
-		c.log.Warnf(" +++++ internalSendRequest failed for connectionClosed")
+		c.log.Warnf("internalSendRequest failed for connectionClosed")
 		if req.callback != nil {
 			req.callback(req.cmd, ErrConnectionClosed)
 		}

@@ -150,11 +150,11 @@ type partitionConsumer struct {
 	startMessageID  trackingMessageID
 	lastDequeuedMsg trackingMessageID
 
-	eventsCh     chan interface{}
-	connectedCh  chan struct{}
+	eventsCh         chan interface{}
+	connectedCh      chan struct{}
 	connectClosedCh  chan struct{}
-	closeCh      chan struct{}
-	clearQueueCh chan func(id trackingMessageID)
+	closeCh          chan struct{}
+	clearQueueCh     chan func(id trackingMessageID)
 
 	nackTracker *negativeAcksTracker
 	dlq         *dlqRouter
@@ -181,7 +181,7 @@ func newPartitionConsumer(parent Consumer, client *client, options *partitionCon
 		startMessageID:       options.startMessageID,
 		connectedCh:          make(chan struct{}),
 		messageCh:            messageCh,
-		connectClosedCh:  	  make(chan struct{}),
+		connectClosedCh:      make(chan struct{}),
 		closeCh:              make(chan struct{}),
 		clearQueueCh:         make(chan func(id trackingMessageID)),
 		compressionProviders: make(map[pb.CompressionType]compression.Provider),
